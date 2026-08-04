@@ -1,8 +1,7 @@
 import os
-import asyncio
-from flask import Flask, request, jsonify
-from aiogram import Bot, Dispatcher
-from aiogram.types import Update
+import traceback
+from quart import Quart, request, jsonify
+from aiogram import Bot, Dispatcher, types
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from config import BOT_TOKEN, logger
@@ -10,62 +9,49 @@ from database import create_tables
 from handlers_user import router as user_router
 from handlers_admin import router as admin_router
 
-# ==================== FLASK ILOVASI ====================
-app = Flask(__name__)
+app = Quart(__name__)
 
-# ==================== BOT VA DISPATCHER ====================
 bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
-# Routerlarni ulash
+# Routerlarni ulash (BU MUHIM!)
 dp.include_router(user_router)
 dp.include_router(admin_router)
 
-# ==================== WEBHOOK ENDPOINT ====================
 @app.route('/webhook', methods=['POST'])
-def webhook():
-    """Telegram dan kelgan update ni qayta ishlaydi"""
-    update_data = request.get_json()
-    if not update_data:
+async def webhook():
+    data = await request.get_json()
+    if not data:
         return jsonify({"ok": False}), 400
-    
+
     try:
-        update = Update(**update_data)
-        # Async funksiyani sinxron ishga tushirish
-        asyncio.run(dp.process_update(update))
+        update = types.Update(**data)
+        await dp.feed_update(bot, update)
+        logger.info(f"Update {update.update_id} processed")
         return jsonify({"ok": True}), 200
     except Exception as e:
-        logger.error(f"Webhook xatosi: {e}")
+        logger.error(f"Webhook xatosi: {e}\n{traceback.format_exc()}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
-# ==================== WEBHOOK O'RNATISH ====================
 @app.route('/set_webhook', methods=['GET'])
-def set_webhook():
-    """Botning webhook manzilini o'rnatadi"""
-    # Render.com da RENDER_EXTERNAL_URL avtomatik beriladi
+async def set_webhook():
     base_url = os.getenv('RENDER_EXTERNAL_URL', 'https://your-bot.onrender.com')
     webhook_url = f"{base_url}/webhook"
-    
     try:
-        asyncio.run(bot.set_webhook(webhook_url))
+        await bot.set_webhook(webhook_url)
         logger.info(f"Webhook o'rnatildi: {webhook_url}")
         return jsonify({"ok": True, "webhook_url": webhook_url})
     except Exception as e:
         logger.error(f"Webhook o'rnatish xatosi: {e}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
-# ==================== ROOT ENDPOINT ====================
 @app.route('/')
-def index():
+async def index():
     return "SMM Bot ishlamoqda! Webhook manzili: /webhook"
 
-# ==================== ISHGA TUSHIRISH ====================
 if __name__ == '__main__':
-    # Ma'lumotlar bazasini yaratish
     create_tables()
-    logger.info("Flask ilovasi ishga tushdi!")
-    
-    # Local testing uchun
+    logger.info("Quart ilovasi ishga tushdi!")
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
