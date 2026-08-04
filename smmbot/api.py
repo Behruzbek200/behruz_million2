@@ -1,5 +1,5 @@
-import aiohttp
-from config import SMM_API_KEY, SMM_API_URL, DEFAULT_MARKUP, logger
+import aiohttp from config 
+import SMM_API_KEY, SMM_API_URL, DEFAULT_MARKUP, logger
 
 async def smm_request(action, **kwargs):
     params = {"key": SMM_API_KEY, "action": action}
