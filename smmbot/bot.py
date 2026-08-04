@@ -1,11 +1,10 @@
-import asyncio
-from aiogram import Bot, Dispatcher
-from aiogram.fsm.storage.memory import MemoryStorage
-
-from config import BOT_TOKEN, logger
-from database import create_tables
-from handlers_user import router as user_router
-from handlers_admin import router as admin_router
+import asyncio from aiogram 
+import Bot, Dispatcher from aiogram.fsm.storage.memory 
+import MemoryStorage from config
+import BOT_TOKEN, logger from database
+import create_tables from handlers_user
+import router as user_router from handlers_admin 
+import router as admin_router
 
 # Bot va Dispatcher yaratish
 bot = Bot(token=BOT_TOKEN)
